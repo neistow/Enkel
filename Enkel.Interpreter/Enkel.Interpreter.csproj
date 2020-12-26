@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Enkel.Core\Enkel.Core.csproj" />
+      <ProjectReference Include="..\Enkel.StandardLibrary\Enkel.StandardLibrary.csproj" />
+    </ItemGroup>
+
+</Project>

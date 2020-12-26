@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Enkel.Core\Enkel.Core.csproj" />
+      <ProjectReference Include="..\Enkel.Interpreter\Enkel.Interpreter.csproj" />
+      <ProjectReference Include="..\Enkel.Lexer\Enkel.Lexer.csproj" />
+      <ProjectReference Include="..\Enkel.Parser\Enkel.Parser.csproj" />
+    </ItemGroup>
+
+</Project>
