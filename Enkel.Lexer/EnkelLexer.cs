@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using Enkel.Core;
 using Enkel.Core.Exceptions;
@@ -27,8 +28,6 @@ namespace Enkel.Lexer
             new Rule(@"for(?!\w+)", TokenType.For),
             new Rule(@"while(?!\w+)", TokenType.While),
             new Rule(@"none(?!\w+)", TokenType.None),
-            new Rule(@"print(?!\w+)", TokenType.Print),
-            new Rule(@"typeof(?!\w+)", TokenType.TypeOf),
             new Rule(@"return(?!\w+)", TokenType.Return),
             new Rule(@"parent(?!\w+)", TokenType.Parent),
             new Rule(@"this(?!\w+)", TokenType.This),

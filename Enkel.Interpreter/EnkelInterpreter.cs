@@ -9,22 +9,19 @@ using Enkel.Core.Lexer.Interfaces;
 using Enkel.Core.Parser.Expressions;
 using Enkel.Core.Parser.Interfaces;
 using Enkel.Core.Parser.Statements;
-using Enkel.StandardLibrary;
 
 namespace Enkel.Interpreter
 {
     public class EnkelInterpreter : IInterpreter
     {
+        private IEnkelEnvironment _globals;
         private IEnkelEnvironment _environment;
+        private readonly Dictionary<IExpression, int> _locals = new Dictionary<IExpression, int>();
 
         public EnkelInterpreter()
         {
-            var global = new EnkelEnvironment();
-            global.Define("IsOdd", new IsOdd());
-            global.Define("IsEven", new IsEven());
-            global.Define("Print", new Print());
-
-            _environment = global;
+            _globals = EnkelEnvironment.GlobalEnvironment;
+            _environment = _globals;
         }
 
         public void Interpret(IEnumerable<IStatement> statements)
@@ -43,7 +40,7 @@ namespace Enkel.Interpreter
             switch (expr.Operator.Type)
             {
                 case TokenType.Minus:
-                    EnsureOperandAreNumbers(expr.Operator, left, right);
+                    EnsureOperandsAreNumbers(expr.Operator, left, right);
                     return Convert.ToDouble(left) - Convert.ToDouble(right);
                 case TokenType.Plus:
                     return left switch
@@ -51,25 +48,34 @@ namespace Enkel.Interpreter
                         double d1 when right is double d2 => Convert.ToDouble(d1) + Convert.ToDouble(d2),
                         string str1 when right is string str2 => Convert.ToString(str1) + Convert.ToString(str2),
                         _ => throw new EnkelRuntimeException(
-                            $"{expr.Operator}: Operands must be either strings or numbers")
+                            $"{expr.Operator}: Operands must be either strings or numbers", expr.Operator)
                     };
                 case TokenType.Slash:
-                    EnsureOperandAreNumbers(expr.Operator, left, right);
-                    return Convert.ToDouble(left) / Convert.ToDouble(right);
+                    EnsureOperandsAreNumbers(expr.Operator, left, right);
+
+                    var first = Convert.ToDouble(left);
+                    var second = Convert.ToDouble(right);
+
+                    if (second == 0)
+                    {
+                        throw new EnkelRuntimeException($"{expr.Operator}: Division by zero", expr.Operator);
+                    }
+
+                    return first / second;
                 case TokenType.Star:
-                    EnsureOperandAreNumbers(expr.Operator, left, right);
+                    EnsureOperandsAreNumbers(expr.Operator, left, right);
                     return Convert.ToDouble(left) * Convert.ToDouble(right);
                 case TokenType.Greater:
-                    EnsureOperandAreNumbers(expr.Operator, left, right);
+                    EnsureOperandsAreNumbers(expr.Operator, left, right);
                     return Convert.ToDouble(left) > Convert.ToDouble(right);
                 case TokenType.GreaterEqual:
-                    EnsureOperandAreNumbers(expr.Operator, left, right);
+                    EnsureOperandsAreNumbers(expr.Operator, left, right);
                     return Convert.ToDouble(left) >= Convert.ToDouble(right);
                 case TokenType.Less:
-                    EnsureOperandAreNumbers(expr.Operator, left, right);
+                    EnsureOperandsAreNumbers(expr.Operator, left, right);
                     return Convert.ToDouble(left) < Convert.ToDouble(right);
                 case TokenType.LessEqual:
-                    EnsureOperandAreNumbers(expr.Operator, left, right);
+                    EnsureOperandsAreNumbers(expr.Operator, left, right);
                     return Convert.ToDouble(left) <= Convert.ToDouble(right);
                 case TokenType.BangEqual:
                     return !IsEqual(left, right);
@@ -122,7 +128,7 @@ namespace Enkel.Interpreter
                 value = Evaluate(statement.Initializer);
             }
 
-            _environment.Define(statement.Token.Lexeme, value);
+            _environment.Define(statement.Token, value);
             return Unit.Value;
         }
 
@@ -180,7 +186,7 @@ namespace Enkel.Interpreter
                 var value = Evaluate(statement.Condition);
                 if (!(value is bool result))
                 {
-                    throw new EnkelRuntimeException("Expression result in while statement must be a bool value");
+                    throw new EnkelRuntimeException("Expression in while statement must be a bool value");
                 }
 
                 if (!result)
@@ -196,7 +202,7 @@ namespace Enkel.Interpreter
         public Unit VisitFunctionStatement(FunctionStatement statement)
         {
             var function = new EnkelFunction(statement, _environment);
-            _environment.Define(statement.Token.Lexeme, function);
+            _environment.Define(statement.Name, function);
             return Unit.Value;
         }
 
@@ -213,13 +219,21 @@ namespace Enkel.Interpreter
 
         public object VisitVarExpr(VariableExpression expr)
         {
-            return _environment.Get(expr.Token.Lexeme);
+            return FindVariable(expr.Token, expr);
         }
 
         public object VisitAssignmentExpr(AssignmentExpression expr)
         {
             var value = Evaluate(expr.Expression);
-            _environment.Assign(expr.Variable.Lexeme, value);
+
+            if (!_locals.TryGetValue(expr, out var distance))
+            {
+                _globals.Assign(expr.Target, value);
+            }
+            else
+            {
+                _environment.AssignAt(distance, expr.Target, value);
+            }
 
             return value;
         }
@@ -230,7 +244,8 @@ namespace Enkel.Interpreter
 
             if (!(left is bool result))
             {
-                throw new EnkelRuntimeException($"{expr.Operator.Lexeme}: expression result must be a bool type");
+                throw new EnkelRuntimeException($"{expr.Operator.Lexeme}: expression result must be a bool type",
+                    expr.Operator);
             }
 
             if (expr.Operator.Type == TokenType.Or)
@@ -259,12 +274,12 @@ namespace Enkel.Interpreter
 
             if (!(callee is ICallable function))
             {
-                throw new EnkelRuntimeException($"{callee} is not callable");
+                throw new EnkelRuntimeException($"{callee} is not callable", expr.Token);
             }
 
             if (args.Count != function.Arity)
             {
-                throw new EnkelRuntimeException($"Expected {function.Arity} arguments. Got: {args.Count}");
+                throw new EnkelRuntimeException($"Expected {function.Arity} arguments. Got: {args.Count}", expr.Token);
             }
 
             return function.Call(this, args);
@@ -287,39 +302,47 @@ namespace Enkel.Interpreter
             }
         }
 
+        public void Resolve(IExpression expression, int depth)
+        {
+            if (!_locals.TryAdd(expression, depth))
+            {
+                throw new ResolveException($"Can't add a local expression: {expression}");
+            }
+        }
+
         private void Execute(IStatement statement)
         {
             statement.Accept(this);
         }
 
-        private void EnsureOperandIsBool(IToken op, object operand)
+        private void EnsureOperandIsBool(IToken @operator, object operand)
         {
             if (operand is bool)
             {
                 return;
             }
 
-            throw new EnkelRuntimeException($"{op}: Operand must be a boolean");
+            throw new EnkelRuntimeException($"{@operator}: Operand must be a boolean", @operator);
         }
 
-        private void EnsureOperandAreNumbers(IToken op, object firstOperand, object secondOperand)
+        private void EnsureOperandsAreNumbers(IToken @operator, object firstOperand, object secondOperand)
         {
             if (firstOperand is double && secondOperand is double)
             {
                 return;
             }
 
-            throw new EnkelRuntimeException($"{op}: Operands must be numbers");
+            throw new EnkelRuntimeException($"{@operator}: Operands must be numbers", @operator);
         }
 
-        private void EnsureOperandIsNumber(IToken op, object operand)
+        private void EnsureOperandIsNumber(IToken @operator, object operand)
         {
             if (operand is double)
             {
                 return;
             }
 
-            throw new EnkelRuntimeException($"{op}: Operand must be a number");
+            throw new EnkelRuntimeException($"{@operator}: Operand must be a number", @operator);
         }
 
         private bool IsEqual(object first, object second)
@@ -337,20 +360,14 @@ namespace Enkel.Interpreter
             return expr.Accept(this);
         }
 
-        private string AsString(object obj)
+        private object FindVariable(IToken token, IExpression expression)
         {
-            switch (obj)
+            if (!_locals.TryGetValue(expression, out var distance))
             {
-                case null:
-                    return "none";
-                case double _:
-                {
-                    var value = obj.ToString();
-                    return value.EndsWith(".0") ? value.Substring(0, value.Length - 2) : value;
-                }
-                default:
-                    return obj.ToString();
+                return _globals.Get(token);
             }
+
+            return _environment.GetAt(distance, token);
         }
     }
 }

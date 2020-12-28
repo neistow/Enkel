@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using Enkel.Core.Exceptions;
 using Enkel.Core.Interpreter.Interfaces;
 using Enkel.Interpreter;
@@ -77,8 +78,11 @@ namespace Enkel
             var tokens = scanner.Tokens();
 
             var parser = new EnkelParser(tokens);
-            var statements = parser.Parse();
+            var statements = parser.Parse().ToList();
 
+            var resolver = new Resolver(_interpreter);
+            resolver.Resolve(statements);
+            
             _interpreter.Interpret(statements);
         }
     }

@@ -13,8 +13,6 @@
         For,
         While,
         None,
-        Print,
-        TypeOf,
         Return,
         Parent,
         This,

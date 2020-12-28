@@ -1,12 +1,10 @@
-﻿using System;
-
-namespace Enkel.Core.Exceptions
+﻿namespace Enkel.Core.Exceptions
 {
-    public class Return : Exception
+    public class Return : EnkelException
     {
         public object Value { get; }
-        
-        public Return(object value)
+
+        public Return(object value) : base("")
         {
             Value = value;
         }

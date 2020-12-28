@@ -23,7 +23,7 @@ namespace Enkel.Interpreter
             var environment = new EnkelEnvironment(_closure);
             for (var i = 0; i < _declaration.Params.Count; i++)
             {
-                environment.Define(_declaration.Params[i].Lexeme, args[i]);
+                environment.Define(_declaration.Params[i], args[i]);
             }
 
             try
@@ -40,7 +40,7 @@ namespace Enkel.Interpreter
 
         public override string ToString()
         {
-            return $"[func {_declaration.Token.Lexeme}]";
+            return $"[func {_declaration.Name.Lexeme}]";
         }
     }
 }

@@ -11,7 +11,8 @@ namespace Enkel.StandardLibrary
 
         public object Call(IInterpreter interpreter, IList<object> args)
         {
-            Console.WriteLine(args.First());
+            var value = args.First() ?? "none";
+            Console.WriteLine(value);
             return null;
         }
     }

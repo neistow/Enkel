@@ -8,5 +8,6 @@ namespace Enkel.Core.Interpreter.Interfaces
     {
         void Interpret(IEnumerable<IStatement> statements);
         void ExecuteBlock(IEnumerable<IStatement> statements, IEnkelEnvironment environment);
+        void Resolve(IExpression expression, int depth);
     }
 }

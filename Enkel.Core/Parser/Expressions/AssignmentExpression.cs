@@ -5,12 +5,12 @@ namespace Enkel.Core.Parser.Expressions
 {
     public class AssignmentExpression : IExpression
     {
-        public IToken Variable { get; }
+        public IToken Target { get; }
         public IExpression Expression { get; }
 
-        public AssignmentExpression(IToken variable, IExpression expression)
+        public AssignmentExpression(IToken target, IExpression expression)
         {
-            Variable = variable;
+            Target = target;
             Expression = expression;
         }
 
