@@ -13,7 +13,7 @@ namespace Enkel.Core.Parser.Expressions
 
         public T Accept<T>(IExprVisitor<T> visitor)
         {
-            return visitor.VisitLiteralExpr(this);
+            return visitor.VisitLiteralExpression(this);
         }
 
         public override string ToString()

@@ -40,6 +40,11 @@ namespace Enkel.Parser
                 return ParseFunction();
             }
 
+            if (CurrentTokenMatches(TokenType.Class))
+            {
+                return ParseClass();
+            }
+
             return ParseStatement();
         }
 
@@ -64,7 +69,7 @@ namespace Enkel.Parser
             return new VarStatement(token, initializer);
         }
 
-        private IStatement ParseFunction()
+        private FunctionStatement ParseFunction()
         {
             if (!TryConsume(TokenType.Identifier, out var name))
             {
@@ -102,6 +107,32 @@ namespace Enkel.Parser
 
             var body = ParseBlock();
             return new FunctionStatement(name, parameters, body);
+        }
+
+        private IStatement ParseClass()
+        {
+            if (!TryConsume(TokenType.Identifier, out var name))
+            {
+                throw new ParseException("Expected class name", CurrentToken);
+            }
+
+            if (!TryConsume(TokenType.LeftBrace, out _))
+            {
+                throw new ParseException("Expected '{' before class body", CurrentToken);
+            }
+
+            var methods = new List<FunctionStatement>();
+            while (!CurrentTokenIsOfType(TokenType.RightBrace) && !IsAtEnd)
+            {
+                methods.Add(ParseFunction());
+            }
+
+            if (!TryConsume(TokenType.RightBrace, out _))
+            {
+                throw new ParseException("Expected '}' after class body", CurrentToken);
+            }
+
+            return new ClassStatement(name, methods);
         }
 
         private IStatement ParseStatement()
@@ -334,6 +365,11 @@ namespace Enkel.Parser
                     return new AssignmentExpression(variableExpr.Token, value);
                 }
 
+                if (expr is GetExpression getExpression)
+                {
+                    return new SetExpression(getExpression.Object, getExpression.Token, value);
+                }
+
                 throw new ParseException("Invalid assignment target", CurrentToken);
             }
 
@@ -440,12 +476,23 @@ namespace Enkel.Parser
 
             while (true)
             {
-                if (!CurrentTokenMatches(TokenType.LeftParen))
+                if (CurrentTokenMatches(TokenType.LeftParen))
+                {
+                    expr = ParseCall(expr);
+                }
+                else if (CurrentTokenMatches(TokenType.Dot))
+                {
+                    if (!TryConsume(TokenType.Identifier, out var token))
+                    {
+                        throw new ParseException("Expected prop name after '.'", CurrentToken);
+                    }
+
+                    expr = new GetExpression(token, expr);
+                }
+                else
                 {
                     return expr;
                 }
-
-                expr = ParseCall(expr);
             }
         }
 
@@ -488,6 +535,11 @@ namespace Enkel.Parser
             if (CurrentTokenMatches(TokenType.Number, TokenType.String))
             {
                 return new LiteralExpression(PreviousToken.Literal);
+            }
+
+            if (CurrentTokenMatches(TokenType.This))
+            {
+                return new ThisExpression(PreviousToken);
             }
 
             if (CurrentTokenMatches(TokenType.LeftParen))

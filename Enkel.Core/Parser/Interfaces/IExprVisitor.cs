@@ -4,13 +4,16 @@ namespace Enkel.Core.Parser.Interfaces
 {
     public interface IExprVisitor<T>
     {
-        T VisitBinaryExpr(BinaryExpression expr);
-        T VisitGroupingExpr(GroupingExpression expr);
-        T VisitLiteralExpr(LiteralExpression expr);
-        T VisitUnaryExpr(UnaryExpression expr);
-        T VisitVarExpr(VariableExpression expr);
-        T VisitAssignmentExpr(AssignmentExpression expr);
-        T VisitLogicalExpr(LogicalExpression expr);
-        T VisitCallExpr(CallExpression expr);
+        T VisitBinaryExpression(BinaryExpression expression);
+        T VisitGroupingExpression(GroupingExpression expression);
+        T VisitLiteralExpression(LiteralExpression expression);
+        T VisitUnaryExpression(UnaryExpression expression);
+        T VisitVarExpression(VariableExpression expression);
+        T VisitAssignmentExpression(AssignmentExpression expression);
+        T VisitLogicalExpression(LogicalExpression expression);
+        T VisitCallExpression(CallExpression expression);
+        T VisitGetExpression(GetExpression expression);
+        T VisitSetExpression(SetExpression expression);
+        T VisitThisExpression(ThisExpression expression);
     }
 }

@@ -20,7 +20,7 @@ namespace Enkel.Core.Parser.Expressions
 
         public T Accept<T>(IExprVisitor<T> visitor)
         {
-            return visitor.VisitCallExpr(this);
+            return visitor.VisitCallExpression(this);
         }
     }
 }

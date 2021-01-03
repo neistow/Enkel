@@ -32,15 +32,15 @@ namespace Enkel.Interpreter
             }
         }
 
-        public object VisitBinaryExpr(BinaryExpression expr)
+        public object VisitBinaryExpression(BinaryExpression expression)
         {
-            var left = Evaluate(expr.Left);
-            var right = Evaluate(expr.Right);
+            var left = Evaluate(expression.Left);
+            var right = Evaluate(expression.Right);
 
-            switch (expr.Operator.Type)
+            switch (expression.Operator.Type)
             {
                 case TokenType.Minus:
-                    EnsureOperandsAreNumbers(expr.Operator, left, right);
+                    EnsureOperandsAreNumbers(expression.Operator, left, right);
                     return Convert.ToDouble(left) - Convert.ToDouble(right);
                 case TokenType.Plus:
                     return left switch
@@ -48,34 +48,35 @@ namespace Enkel.Interpreter
                         double d1 when right is double d2 => Convert.ToDouble(d1) + Convert.ToDouble(d2),
                         string str1 when right is string str2 => Convert.ToString(str1) + Convert.ToString(str2),
                         _ => throw new EnkelRuntimeException(
-                            $"{expr.Operator}: Operands must be either strings or numbers", expr.Operator)
+                            $"{expression.Operator}: Operands must be either strings or numbers", expression.Operator)
                     };
                 case TokenType.Slash:
-                    EnsureOperandsAreNumbers(expr.Operator, left, right);
+                    EnsureOperandsAreNumbers(expression.Operator, left, right);
 
                     var first = Convert.ToDouble(left);
                     var second = Convert.ToDouble(right);
 
                     if (second == 0)
                     {
-                        throw new EnkelRuntimeException($"{expr.Operator}: Division by zero", expr.Operator);
+                        throw new EnkelRuntimeException($"{expression.Operator}: Division by zero",
+                            expression.Operator);
                     }
 
                     return first / second;
                 case TokenType.Star:
-                    EnsureOperandsAreNumbers(expr.Operator, left, right);
+                    EnsureOperandsAreNumbers(expression.Operator, left, right);
                     return Convert.ToDouble(left) * Convert.ToDouble(right);
                 case TokenType.Greater:
-                    EnsureOperandsAreNumbers(expr.Operator, left, right);
+                    EnsureOperandsAreNumbers(expression.Operator, left, right);
                     return Convert.ToDouble(left) > Convert.ToDouble(right);
                 case TokenType.GreaterEqual:
-                    EnsureOperandsAreNumbers(expr.Operator, left, right);
+                    EnsureOperandsAreNumbers(expression.Operator, left, right);
                     return Convert.ToDouble(left) >= Convert.ToDouble(right);
                 case TokenType.Less:
-                    EnsureOperandsAreNumbers(expr.Operator, left, right);
+                    EnsureOperandsAreNumbers(expression.Operator, left, right);
                     return Convert.ToDouble(left) < Convert.ToDouble(right);
                 case TokenType.LessEqual:
-                    EnsureOperandsAreNumbers(expr.Operator, left, right);
+                    EnsureOperandsAreNumbers(expression.Operator, left, right);
                     return Convert.ToDouble(left) <= Convert.ToDouble(right);
                 case TokenType.BangEqual:
                     return !IsEqual(left, right);
@@ -86,27 +87,27 @@ namespace Enkel.Interpreter
             return null;
         }
 
-        public object VisitGroupingExpr(GroupingExpression expr)
+        public object VisitGroupingExpression(GroupingExpression expression)
         {
-            return Evaluate(expr.Expression);
+            return Evaluate(expression.Expression);
         }
 
-        public object VisitLiteralExpr(LiteralExpression expr)
+        public object VisitLiteralExpression(LiteralExpression expression)
         {
-            return expr.Value;
+            return expression.Value;
         }
 
-        public object VisitUnaryExpr(UnaryExpression expr)
+        public object VisitUnaryExpression(UnaryExpression expression)
         {
-            var right = Evaluate(expr.Right);
+            var right = Evaluate(expression.Right);
 
-            switch (expr.Operator.Type)
+            switch (expression.Operator.Type)
             {
                 case TokenType.Minus:
-                    EnsureOperandIsNumber(expr.Operator, right);
+                    EnsureOperandIsNumber(expression.Operator, right);
                     return -Convert.ToDouble(right);
                 case TokenType.Bang:
-                    EnsureOperandIsBool(expr.Operator, right);
+                    EnsureOperandIsBool(expression.Operator, right);
                     return !Convert.ToBoolean(right);
             }
 
@@ -201,8 +202,8 @@ namespace Enkel.Interpreter
 
         public Unit VisitFunctionStatement(FunctionStatement statement)
         {
-            var function = new EnkelFunction(statement, _environment);
-            _environment.Define(statement.Name, function);
+            var function = new EnkelFunction(statement, _environment, false);
+            _environment.Define(statement.Token, function);
             return Unit.Value;
         }
 
@@ -217,38 +218,58 @@ namespace Enkel.Interpreter
             throw new Return(result);
         }
 
-        public object VisitVarExpr(VariableExpression expr)
+        public Unit VisitClassStatement(ClassStatement statement)
         {
-            return FindVariable(expr.Token, expr);
+            _environment.Define(statement.Identifier, null);
+
+            var methods = new Dictionary<string, EnkelFunction>();
+            foreach (var method in statement.Methods)
+            {
+                var function = new EnkelFunction(method, _environment, method.IsConstructor());
+                if (!methods.TryAdd(method.Token.Lexeme, function))
+                {
+                    throw new EnkelRuntimeException("Can't declare a duplicate method", method.Token);
+                }
+            }
+
+            var @class = new EnkelClass(statement.Identifier, methods);
+            _environment.Assign(statement.Identifier, @class);
+
+            return Unit.Value;
         }
 
-        public object VisitAssignmentExpr(AssignmentExpression expr)
+        public object VisitVarExpression(VariableExpression expression)
         {
-            var value = Evaluate(expr.Expression);
+            return FindVariable(expression.Token, expression);
+        }
 
-            if (!_locals.TryGetValue(expr, out var distance))
+        public object VisitAssignmentExpression(AssignmentExpression expression)
+        {
+            var value = Evaluate(expression.Expression);
+
+            if (!_locals.TryGetValue(expression, out var distance))
             {
-                _globals.Assign(expr.Target, value);
+                _globals.Assign(expression.Target, value);
             }
             else
             {
-                _environment.AssignAt(distance, expr.Target, value);
+                _environment.AssignAt(distance, expression.Target, value);
             }
 
             return value;
         }
 
-        public object VisitLogicalExpr(LogicalExpression expr)
+        public object VisitLogicalExpression(LogicalExpression expression)
         {
-            var left = Evaluate(expr.Left);
+            var left = Evaluate(expression.Left);
 
             if (!(left is bool result))
             {
-                throw new EnkelRuntimeException($"{expr.Operator.Lexeme}: expression result must be a bool type",
-                    expr.Operator);
+                throw new EnkelRuntimeException($"{expression.Operator.Lexeme}: expression result must be a bool type",
+                    expression.Operator);
             }
 
-            if (expr.Operator.Type == TokenType.Or)
+            if (expression.Operator.Type == TokenType.Or)
             {
                 if (result)
                 {
@@ -263,26 +284,57 @@ namespace Enkel.Interpreter
                 }
             }
 
-            return Evaluate(expr.Right);
+            return Evaluate(expression.Right);
         }
 
-        public object VisitCallExpr(CallExpression expr)
+        public object VisitCallExpression(CallExpression expression)
         {
-            var callee = Evaluate(expr.Callee);
+            var callee = Evaluate(expression.Callee);
 
-            var args = expr.Arguments.Select(Evaluate).ToList();
+            var args = expression.Arguments.Select(Evaluate).ToList();
 
             if (!(callee is ICallable function))
             {
-                throw new EnkelRuntimeException($"{callee} is not callable", expr.Token);
+                throw new EnkelRuntimeException($"{callee} is not callable", expression.Token);
             }
 
             if (args.Count != function.Arity)
             {
-                throw new EnkelRuntimeException($"Expected {function.Arity} arguments. Got: {args.Count}", expr.Token);
+                throw new EnkelRuntimeException($"Expected {function.Arity} arguments. Got: {args.Count}",
+                    expression.Token);
             }
 
             return function.Call(this, args);
+        }
+
+        public object VisitGetExpression(GetExpression expression)
+        {
+            var obj = Evaluate(expression.Object);
+            if (obj is EnkelInstance instance)
+            {
+                return instance.Get(expression.Token);
+            }
+
+            throw new EnkelRuntimeException($"Can't access properties of {expression.Token.Lexeme}", expression.Token);
+        }
+
+        public object VisitSetExpression(SetExpression expression)
+        {
+            var obj = Evaluate(expression.Object);
+
+            if (!(obj is EnkelInstance enkelInstance))
+            {
+                throw new EnkelRuntimeException("Can't set a field for non class instance", expression.Token);
+            }
+
+            var value = Evaluate(expression.Value);
+            enkelInstance.Set(expression.Token, value);
+            return value;
+        }
+
+        public object VisitThisExpression(ThisExpression expression)
+        {
+            return FindVariable(expression.Token, expression);
         }
 
         public void ExecuteBlock(IEnumerable<IStatement> statements, IEnkelEnvironment environment)

@@ -1,9 +1,10 @@
-namespace Enkel.Core.Interpreter
+namespace Enkel.Parser
 {
     public enum FunctionType
     {
         None,
         Method,
-        Function
+        Function,
+        Constructor
     }
 }

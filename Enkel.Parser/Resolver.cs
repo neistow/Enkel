@@ -16,6 +16,7 @@ namespace Enkel.Parser
 
         private readonly Stack<Dictionary<string, bool>> _scopes = new Stack<Dictionary<string, bool>>();
         private FunctionType _currentFunction = FunctionType.None;
+        private ClassType _currentClass = ClassType.None;
 
         public Resolver(IInterpreter interpreter)
         {
@@ -23,37 +24,37 @@ namespace Enkel.Parser
         }
 
 
-        public Unit VisitBinaryExpr(BinaryExpression expr)
+        public Unit VisitBinaryExpression(BinaryExpression expression)
         {
-            Resolve(expr.Left);
-            Resolve(expr.Right);
+            Resolve(expression.Left);
+            Resolve(expression.Right);
 
             return Unit.Value;
         }
 
-        public Unit VisitGroupingExpr(GroupingExpression expr)
+        public Unit VisitGroupingExpression(GroupingExpression expression)
         {
-            Resolve(expr.Expression);
+            Resolve(expression.Expression);
             return Unit.Value;
         }
 
-        public Unit VisitLiteralExpr(LiteralExpression expr)
+        public Unit VisitLiteralExpression(LiteralExpression expression)
         {
             return Unit.Value;
         }
 
-        public Unit VisitUnaryExpr(UnaryExpression expr)
+        public Unit VisitUnaryExpression(UnaryExpression expression)
         {
-            Resolve(expr.Right);
+            Resolve(expression.Right);
             return Unit.Value;
         }
 
-        public Unit VisitVarExpr(VariableExpression expr)
+        public Unit VisitVarExpression(VariableExpression expression)
         {
             if (_scopes.Count != 0)
             {
                 var scope = _scopes.Peek();
-                if (scope.TryGetValue(expr.Token.Lexeme, out var processed))
+                if (scope.TryGetValue(expression.Token.Lexeme, out var processed))
                 {
                     if (!processed)
                     {
@@ -62,34 +63,67 @@ namespace Enkel.Parser
                 }
             }
 
-            ResolveLocal(expr, expr.Token);
+            ResolveLocal(expression, expression.Token);
             return Unit.Value;
         }
 
-        public Unit VisitAssignmentExpr(AssignmentExpression expr)
+        public Unit VisitAssignmentExpression(AssignmentExpression expression)
         {
-            Resolve(expr.Expression);
-            ResolveLocal(expr, expr.Target);
+            Resolve(expression.Expression);
+            ResolveLocal(expression, expression.Target);
 
             return Unit.Value;
         }
 
-        public Unit VisitLogicalExpr(LogicalExpression expr)
+        public Unit VisitLogicalExpression(LogicalExpression expression)
         {
-            Resolve(expr.Left);
-            Resolve(expr.Right);
+            Resolve(expression.Left);
+            Resolve(expression.Right);
             return Unit.Value;
         }
 
-        public Unit VisitCallExpr(CallExpression expr)
+        public Unit VisitCallExpression(CallExpression expression)
         {
-            Resolve(expr.Callee);
+            Resolve(expression.Callee);
 
-            foreach (var arg in expr.Arguments)
+            if (expression.Callee is GetExpression getExpression)
+            {
+                if (getExpression.Token.Lexeme == "constructor")
+                {
+                    throw new ResolveException("Can't call constructor directly");
+                }
+            }
+
+            foreach (var arg in expression.Arguments)
             {
                 Resolve(arg);
             }
 
+            return Unit.Value;
+        }
+
+        public Unit VisitGetExpression(GetExpression expression)
+        {
+            Resolve(expression.Object);
+            return Unit.Value;
+        }
+
+        public Unit VisitSetExpression(SetExpression expression)
+        {
+            Resolve(expression.Value);
+            Resolve(expression.Object);
+
+            return Unit.Value;
+        }
+
+        public Unit VisitThisExpression(ThisExpression expression)
+        {
+            if (_currentClass == ClassType.None)
+            {
+                throw new ResolveException("Can't use 'this' outside of class");
+            }
+
+            ResolveLocal(expression, expression.Token);
             return Unit.Value;
         }
 
@@ -143,8 +177,8 @@ namespace Enkel.Parser
 
         public Unit VisitFunctionStatement(FunctionStatement statement)
         {
-            Declare(statement.Name);
-            Define(statement.Name);
+            Declare(statement.Token);
+            Define(statement.Token);
 
             ResolveFunction(statement, FunctionType.Function);
             return Unit.Value;
@@ -157,11 +191,41 @@ namespace Enkel.Parser
                 throw new ResolveException("Unexpected return outside a function");
             }
 
-            if (statement.Value != null)
+            if (statement.Value == null)
             {
-                Resolve(statement.Value);
+                return Unit.Value;
             }
 
+            if (_currentFunction == FunctionType.Constructor)
+            {
+                throw new ResolveException("Can't return a value from constructor");
+            }
+
+            Resolve(statement.Value);
+
+            return Unit.Value;
+        }
+
+        public Unit VisitClassStatement(ClassStatement statement)
+        {
+            var enclosingClass = _currentClass;
+            _currentClass = ClassType.Class;
+
+            Declare(statement.Identifier);
+            Define(statement.Identifier);
+
+            BeginScope();
+            _scopes.Peek().TryAdd("this", true);
+
+            foreach (var method in statement.Methods)
+            {
+                var type = method.Token.Lexeme == "constructor" ? FunctionType.Constructor : FunctionType.Method;
+                ResolveFunction(method, type);
+            }
+
+            EndScope();
+
+            _currentClass = enclosingClass;
             return Unit.Value;
         }
 

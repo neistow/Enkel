@@ -16,7 +16,7 @@ namespace Enkel.Core.Parser.Expressions
 
         public T Accept<T>(IExprVisitor<T> visitor)
         {
-            return visitor.VisitAssignmentExpr(this);
+            return visitor.VisitAssignmentExpression(this);
         }
     }
 }

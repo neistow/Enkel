@@ -1,20 +1,20 @@
-﻿using Enkel.Core.Lexer.Interfaces;
+using Enkel.Core.Lexer.Interfaces;
 using Enkel.Core.Parser.Interfaces;
 
 namespace Enkel.Core.Parser.Expressions
 {
-    public class VariableExpression : IExpression
+    public class ThisExpression : IExpression
     {
         public IToken Token { get; }
 
-        public VariableExpression(IToken token)
+        public ThisExpression(IToken token)
         {
             Token = token;
         }
 
         public T Accept<T>(IExprVisitor<T> visitor)
         {
-            return visitor.VisitVarExpression(this);
+            return visitor.VisitThisExpression(this);
         }
     }
 }

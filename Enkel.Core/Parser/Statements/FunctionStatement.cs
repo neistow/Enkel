@@ -6,13 +6,13 @@ namespace Enkel.Core.Parser.Statements
 {
     public class FunctionStatement : IStatement
     {
-        public IToken Name { get; }
+        public IToken Token { get; }
         public List<IToken> Params { get; } = new List<IToken>();
         public List<IStatement> Body { get; } = new List<IStatement>();
 
-        public FunctionStatement(IToken name, IEnumerable<IToken> parameters, IEnumerable<IStatement> body)
+        public FunctionStatement(IToken token, IEnumerable<IToken> parameters, IEnumerable<IStatement> body)
         {
-            Name = name;
+            Token = token;
             Params.AddRange(parameters);
             Body.AddRange(body);
         }

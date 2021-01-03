@@ -11,5 +11,6 @@ namespace Enkel.Core.Parser.Interfaces
         T VisitWhileStatement(WhileStatement statement);
         T VisitFunctionStatement(FunctionStatement statement);
         T VisitReturnStatement(ReturnStatement statement);
+        T VisitClassStatement(ClassStatement statement);
     }
 }
