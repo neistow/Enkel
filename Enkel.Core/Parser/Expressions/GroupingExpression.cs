@@ -11,7 +11,7 @@ namespace Enkel.Core.Parser.Expressions
             Expression = expression;
         }
 
-        public T Accept<T>(IExprVisitor<T> visitor)
+        public T Accept<T>(IExpressionVisitor<T> visitor)
         {
             return visitor.VisitGroupingExpression(this);
         }

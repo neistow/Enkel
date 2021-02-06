@@ -10,7 +10,7 @@ using Enkel.Core.Parser.Statements;
 
 namespace Enkel.Parser
 {
-    public class Resolver : IExprVisitor<Unit>, IStatementVisitor<Unit>
+    public class Resolver : IExpressionVisitor<Unit>, IStatementVisitor<Unit>
     {
         private readonly IInterpreter _interpreter;
 

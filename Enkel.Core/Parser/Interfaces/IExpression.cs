@@ -2,6 +2,6 @@
 {
     public interface IExpression
     {
-        public T Accept<T>(IExprVisitor<T> visitor);
+        public T Accept<T>(IExpressionVisitor<T> visitor);
     }
 }

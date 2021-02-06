@@ -2,7 +2,7 @@
 
 namespace Enkel.Core.Parser.Interfaces
 {
-    public interface IExprVisitor<T>
+    public interface IExpressionVisitor<T>
     {
         T VisitBinaryExpression(BinaryExpression expression);
         T VisitGroupingExpression(GroupingExpression expression);

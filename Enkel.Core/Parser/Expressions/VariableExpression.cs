@@ -12,7 +12,7 @@ namespace Enkel.Core.Parser.Expressions
             Token = token;
         }
 
-        public T Accept<T>(IExprVisitor<T> visitor)
+        public T Accept<T>(IExpressionVisitor<T> visitor)
         {
             return visitor.VisitVarExpression(this);
         }

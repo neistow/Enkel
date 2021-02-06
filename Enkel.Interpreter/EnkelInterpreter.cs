@@ -314,8 +314,8 @@ namespace Enkel.Interpreter
             {
                 return instance.Get(expression.Token);
             }
-
-            throw new EnkelRuntimeException($"Can't access properties of {expression.Token.Lexeme}", expression.Token);
+            
+            throw new EnkelRuntimeException($"Can't access property {expression.Token.Lexeme}", expression.Token);
         }
 
         public object VisitSetExpression(SetExpression expression)

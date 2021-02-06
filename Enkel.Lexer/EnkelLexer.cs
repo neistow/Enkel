@@ -15,7 +15,7 @@ namespace Enkel.Lexer
     {
         private readonly IList<string> _source = new List<string>();
 
-        private static readonly IRule[] Rules =
+        private static readonly Rule[] Rules =
         {
             new Rule(@"class(?!\w+)", TokenType.Class),
             new Rule(@"if(?!\w+)", TokenType.If),
@@ -29,7 +29,6 @@ namespace Enkel.Lexer
             new Rule(@"while(?!\w+)", TokenType.While),
             new Rule(@"none(?!\w+)", TokenType.None),
             new Rule(@"return(?!\w+)", TokenType.Return),
-            new Rule(@"parent(?!\w+)", TokenType.Parent),
             new Rule(@"this(?!\w+)", TokenType.This),
             new Rule(@"var(?!\w+)", TokenType.Var),
 
@@ -93,11 +92,6 @@ namespace Enkel.Lexer
             var currentPosition = 0;
             while (true)
             {
-                if (currentPosition > line.Length)
-                {
-                    yield break;
-                }
-
                 var nextToken = _tokenStartRegex.Match(line, currentPosition);
                 if (!nextToken.Success)
                 {
@@ -114,15 +108,25 @@ namespace Enkel.Lexer
                     var matchedGroupName = (match.Groups as IList<Group>).First(g => g.Success && g.Name.Length > 1);
                     if (Enum.TryParse(matchedGroupName.Name, out TokenType tokenType))
                     {
-                        yield return tokenType switch
+                        if (tokenType == TokenType.Number)
                         {
-                            TokenType.Number => new Token(tokenType, match.Value,
-                                double.Parse(match.Value, CultureInfo.InvariantCulture), lineNumber),
-                            TokenType.String => new Token(tokenType, match.Value, match.Value.Trim('"'),
-                                lineNumber),
-                            _ => new Token(tokenType, match.Value, null, lineNumber)
-                        };
+                            var number = double.Parse(match.Value, CultureInfo.InvariantCulture);
+                            if (double.IsInfinity(number))
+                            {
+                                throw new LexerException($"Number {match.Value} is too big to be a correct value");
+                            }
 
+                            yield return new Token(tokenType, match.Value, number, lineNumber);
+                            continue;
+                        }
+
+                        if (tokenType == TokenType.String)
+                        {
+                            yield return new Token(tokenType, match.Value, match.Value.Trim('"'), lineNumber);
+                            continue;
+                        }
+
+                        yield return new Token(tokenType, match.Value, null, lineNumber);
                         continue;
                     }
                 }

@@ -1,5 +1,4 @@
-﻿using Enkel.Core;
-using Enkel.Core.Lexer;
+﻿using Enkel.Core.Lexer;
 using Enkel.Core.Lexer.Interfaces;
 
 namespace Enkel.Lexer

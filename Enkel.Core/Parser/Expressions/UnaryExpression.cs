@@ -14,7 +14,7 @@ namespace Enkel.Core.Parser.Expressions
             Right = right;
         }
 
-        public T Accept<T>(IExprVisitor<T> visitor)
+        public T Accept<T>(IExpressionVisitor<T> visitor)
         {
             return visitor.VisitUnaryExpression(this);
         }

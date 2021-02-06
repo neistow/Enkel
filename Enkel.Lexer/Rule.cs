@@ -1,10 +1,8 @@
-﻿using Enkel.Core;
-using Enkel.Core.Lexer;
-using Enkel.Core.Lexer.Interfaces;
+﻿using Enkel.Core.Lexer;
 
 namespace Enkel.Lexer
 {
-    public class Rule : IRule
+    public class Rule
     {
         public string RegexString { get; }
 
